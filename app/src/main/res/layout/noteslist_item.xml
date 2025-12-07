@@ -14,12 +14,85 @@
      limitations under the License.
 -->
 
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@android:id/text1"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="?android:attr/listPreferredItemHeight"
-    android:textAppearance="?android:attr/textAppearanceLarge"
-    android:gravity="center_vertical"
-    android:paddingLeft="5dip"
-    android:singleLine="true"
-/>
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="?android:attr/colorBackground">
+    
+    <!-- 分类间隔视图 -->
+    <View
+        android:id="@+id/category_divider"
+        android:layout_width="match_parent"
+        android:layout_height="16dp"
+        android:visibility="gone" />
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center_vertical">
+    
+    <!-- 多选框，用于批量删除 -->
+    <CheckBox
+        android:id="@+id/note_checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="8dp"
+        android:visibility="gone"/>
+
+    <!-- 内容区域 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <!-- 分类标签 -->
+        <TextView
+            android:id="@+id/category_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:background="@drawable/category_label_bg"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:layout_marginBottom="4dp"
+            android:visibility="gone" />
+
+        <!-- 笔记标题 -->
+        <TextView
+            android:id="@+id/note_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColor"
+            android:singleLine="true"
+            android:ellipsize="end" />
+
+        <!-- 时间戳 -->
+        <TextView
+            android:id="@+id/timestamp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginTop="4dp" />
+
+    </LinearLayout>
+    
+    <!-- 删除图标 -->
+    <ImageView
+        android:id="@+id/note_delete"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@android:drawable/ic_menu_delete"
+        android:contentDescription="删除笔记"
+        android:padding="4dp"
+        android:visibility="visible"/>
+    </LinearLayout>
+</LinearLayout>

@@ -23,6 +23,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
+import com.example.android.notepad.ThemeManager;
 
 /**
  * This Activity allows the user to edit a note's title. It displays a floating window
@@ -64,6 +65,8 @@ public class TitleEditor extends Activity {
      */
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // 设置主题 - 必须在super.onCreate()之前调用
+        setTheme(ThemeManager.getThemeResId(this));
         super.onCreate(savedInstanceState);
 
         // Set the View for this Activity object's UI.
@@ -82,7 +85,7 @@ public class TitleEditor extends Activity {
          * android.content.AsyncQueryHandler or android.os.AsyncTask.
          */
 
-        mCursor = managedQuery(
+        mCursor = getContentResolver().query(
             mUri,        // The URI for the note that is to be retrieved.
             PROJECTION,  // The columns to retrieve
             null,        // No selection criteria are used, so no where columns are needed.

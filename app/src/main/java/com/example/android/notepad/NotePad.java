@@ -150,5 +150,11 @@ public final class NotePad {
          * <P>Type: INTEGER (long from System.curentTimeMillis())</P>
          */
         public static final String COLUMN_NAME_MODIFICATION_DATE = "modified";
+        
+        /**
+         * Column name for the category ID
+         * <P>Type: INTEGER</P>
+         */
+        public static final String COLUMN_NAME_CATEGORY_ID = "category_id";
     }
 }

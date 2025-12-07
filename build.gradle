@@ -1,17 +1,24 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
     repositories {
-        google()
-        jcenter()
+        // 1. 华为云镜像（优先，已同步 8.12.2 插件，国内高速）
+        maven { url 'https://repo.huaweicloud.com/repository/maven/' }
+        // 2. 阿里云镜像（兜底，覆盖大部分依赖）
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' } // Gradle 插件专用
+        maven { url 'https://maven.aliyun.com/repository/google' } // 替代 google()
+        maven { url 'https://maven.aliyun.com/repository/public' } // 替代 mavenCentral()
+        // 注：删除 google() 和 jcenter()（国内访问失败，已用镜像替代）
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.12.2'
+        classpath 'com.android.tools.build:gradle:8.13.0' // 保持插件版本不变
     }
 }
 
 allprojects {
     repositories {
-        google()
-        jcenter()
+        // 与 buildscript 仓库一致，确保所有模块依赖走国内镜像
+        maven { url 'https://repo.huaweicloud.com/repository/maven/' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/jcenter' } // 兜底旧依赖（替代 jcenter()）
     }
 }

@@ -12,4 +12,10 @@
           android:icon="@drawable/ic_menu_compose"
           android:title="@string/menu_paste"
           android:alphabeticShortcut='p' />
+    <!--  Batch delete option to toggle multi-select mode -->
+    <item android:id="@+id/menu_batch_delete"
+          android:icon="@android:drawable/ic_menu_delete"
+          android:title="@string/menu_batch_delete"
+          android:alphabeticShortcut='b' />
+
 </menu>

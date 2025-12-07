@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 菜单项ID定义 -->
+    <item name="menu_theme_toggle" type="id" />
+    <item name="menu_category_manager" type="id" />
+    <item name="menu_export_notes" type="id" />
+    <item name="menu_export_all" type="id" />
+    <item name="menu_export_category" type="id" />
+    <item name="menu_export_single" type="id" />
+    <item name="menu_batch_delete_button" type="id" />
+    <item name="menu_batch_delete" type="id" />
+</resources>

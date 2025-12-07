@@ -16,8 +16,6 @@
 
 package com.example.android.notepad;
 
-import static com.example.android.notepad.R.*;
-
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -29,16 +27,30 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.LiveFolders;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ArrayAdapter;
+import android.widget.SimpleCursorAdapter;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This Activity handles "editing" a note, where editing is responding to
@@ -62,7 +74,8 @@ public class NoteEditor extends Activity {
         new String[] {
             NotePad.Notes._ID,
             NotePad.Notes.COLUMN_NAME_TITLE,
-            NotePad.Notes.COLUMN_NAME_NOTE
+            NotePad.Notes.COLUMN_NAME_NOTE,
+            NotePad.Notes.COLUMN_NAME_CATEGORY_ID
     };
 
     // A label for the saved state of the activity
@@ -79,6 +92,9 @@ public class NoteEditor extends Activity {
     private Cursor mCursor;
     private EditText mText;
     private String mOriginalContent;
+    private Spinner mCategorySpinner;
+    private ArrayAdapter<String> mCategoryAdapter;
+    private long mCurrentCategoryId = NotePadProvider.Categories.DEFAULT_CATEGORY_ID;
 
     /**
      * Defines a custom EditText View that draws lines between each line of text that is displayed.
@@ -104,6 +120,8 @@ public class NoteEditor extends Activity {
          */
         @Override
         protected void onDraw(Canvas canvas) {
+            // First draw the text content using the parent's onDraw method
+            super.onDraw(canvas);
 
             // Gets the number of lines of text in the View.
             int count = getLineCount();
@@ -127,9 +145,6 @@ public class NoteEditor extends Activity {
                  */
                 canvas.drawLine(r.left, baseline + 1, r.right, baseline + 1, paint);
             }
-
-            // Finishes up by calling the parent method
-            super.onDraw(canvas);
         }
     }
 
@@ -139,7 +154,10 @@ public class NoteEditor extends Activity {
      */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // 设置主题 - 必须在super.onCreate()之前调用
+        setTheme(ThemeManager.getThemeResId(this));
         super.onCreate(savedInstanceState);
+        
 
         /*
          * Creates an Intent to use when the Activity object's result is sent back to the
@@ -165,29 +183,14 @@ public class NoteEditor extends Activity {
         } else if (Intent.ACTION_INSERT.equals(action)
                 || Intent.ACTION_PASTE.equals(action)) {
 
-            // Sets the Activity state to INSERT, gets the general note URI, and inserts an
-            // empty record in the provider
+            // Sets the Activity state to INSERT and gets the general note URI
             mState = STATE_INSERT;
-            mUri = getContentResolver().insert(intent.getData(), null);
+            mUri = null;
 
             /*
-             * If the attempt to insert the new note fails, shuts down this Activity. The
-             * originating Activity receives back RESULT_CANCELED if it requested a result.
-             * Logs that the insert failed.
+             * No need to insert an empty record here. We'll insert the actual content
+             * in onPause() when the user has entered text.
              */
-            if (mUri == null) {
-
-                // Writes the log identifier, a message, and the URI that failed.
-                Log.e(TAG, "Failed to insert new note into " + getIntent().getData());
-
-                // Closes the activity.
-                finish();
-                return;
-            }
-
-            // Since the new entry was created, this sets the result to be returned
-            // set the result to be returned.
-            setResult(RESULT_OK, (new Intent()).setAction(mUri.toString()));
 
         // If the action was other than EDIT or INSERT:
         } else {
@@ -207,13 +210,18 @@ public class NoteEditor extends Activity {
          * the block will be momentary, but in a real app you should use
          * android.content.AsyncQueryHandler or android.os.AsyncTask.
          */
-        mCursor = managedQuery(
-            mUri,         // The URI that gets multiple notes from the provider.
-            PROJECTION,   // A projection that returns the note ID and note content for each note.
-            null,         // No "where" clause selection criteria.
-            null,         // No "where" clause selection values.
-            null          // Use the default sort order (modification date, descending)
-        );
+        if (mState == STATE_EDIT) {
+            mCursor = managedQuery(
+                mUri,         // The URI that gets multiple notes from the provider.
+                PROJECTION,   // A projection that returns the note ID and note content for each note.
+                null,         // No "where" clause selection criteria.
+                null,         // No "where" clause selection values.
+                null          // Use the default sort order (modification date, descending)
+            );
+        } else {
+            // For INSERT state, we don't need to query the database yet
+            mCursor = null;
+        }
 
         // For a paste, initializes the data from clipboard.
         // (Must be done after mCursor is initialized.)
@@ -229,6 +237,25 @@ public class NoteEditor extends Activity {
 
         // Gets a handle to the EditText in the the layout.
         mText = (EditText) findViewById(R.id.note);
+        mCategorySpinner = (Spinner) findViewById(R.id.category_spinner);
+        
+        // 初始化保存按钮
+        Button mBtnSave = (Button) findViewById(R.id.btn_save);
+        if (mBtnSave != null) {
+            mBtnSave.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // 保存笔记
+                    String text = mText.getText().toString();
+                    updateNote(text, null);
+                    finish();
+                }
+            });
+        }
+        
+        // 初始化分类选择器
+        initializeCategorySpinner();
+        // 分类适配器已在initializeCategorySpinner()中设置
 
         /*
          * If this Activity had stopped previously, its state was written the ORIGINAL_CONTENT
@@ -290,11 +317,33 @@ public class NoteEditor extends Activity {
             // the text cursor's position.
             int colNoteIndex = mCursor.getColumnIndex(NotePad.Notes.COLUMN_NAME_NOTE);
             String note = mCursor.getString(colNoteIndex);
+            // Ensure note is not null to avoid input issues
+            if (note == null) {
+                note = "";
+            }
             mText.setTextKeepState(note);
 
             // Stores the original note text, to allow the user to revert changes.
             if (mOriginalContent == null) {
                 mOriginalContent = note;
+            }
+            
+            // 加载笔记的分类ID
+            int colCategoryIndex = mCursor.getColumnIndex(NotePad.Notes.COLUMN_NAME_CATEGORY_ID);
+            if (colCategoryIndex != -1) {
+                mCurrentCategoryId = mCursor.getLong(colCategoryIndex);
+                
+                // 如果分类Spinner已经初始化，设置选中项
+            if (mCategorySpinner != null && mCategoryAdapter != null && mCategoryNames != null) {
+                // 遍历分类名称列表，找到匹配的分类ID
+                for (int i = 0; i < mCategoryNames.size(); i++) {
+                    String categoryName = mCategoryNames.get(i);
+                    if (mCategoryIdMap.get(categoryName) == mCurrentCategoryId) {
+                        mCategorySpinner.setSelection(i);
+                        break;
+                    }
+                }
+            }
             }
 
         /*
@@ -370,8 +419,13 @@ public class NoteEditor extends Activity {
                 // Creates a map to contain the new values for the columns
                 updateNote(text, null);
             } else if (mState == STATE_INSERT) {
-                updateNote(text, text);
-                mState = STATE_EDIT;
+                if (length > 0) {
+                    updateNote(text, text);
+                    mState = STATE_EDIT;
+                } else {
+                    // 如果没有输入内容，不创建笔记
+                    setResult(RESULT_CANCELED);
+                }
           }
         }
     }
@@ -391,21 +445,18 @@ public class NoteEditor extends Activity {
         // Inflate menu from XML resource
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.editor_options_menu, menu);
-
+        
+        // 添加主题切换菜单项
+        MenuItem themeItem = menu.add(Menu.NONE, R.id.menu_theme_toggle, Menu.NONE, 
+                ThemeManager.isDarkTheme(this) ? R.string.menu_theme_light : R.string.menu_theme_dark);
+        
         // Only add extra menu items for a saved note 
         if (mState == STATE_EDIT) {
-            // Append to the
-            // menu items for any other activities that can do stuff with it
-            // as well.  This does a query on the system for any activities that
-            // implement the ALTERNATIVE_ACTION for our data, adding a menu item
-            // for each one that is found.
-            Intent intent = new Intent(null, mUri);
-            intent.addCategory(Intent.CATEGORY_ALTERNATIVE);
-            menu.addIntentOptions(Menu.CATEGORY_ALTERNATIVE, 0, 0,
-                    new ComponentName(this, NoteEditor.class), null, intent, 0, null);
+            // 添加导出笔记菜单项
+            MenuItem exportItem = menu.add(Menu.NONE, R.id.menu_export_single, Menu.NONE, R.string.menu_export_notes);
         }
 
-        return super.onCreateOptionsMenu(menu);
+        return true;
     }
 
     @Override
@@ -419,7 +470,7 @@ public class NoteEditor extends Activity {
         } else {
             menu.findItem(R.id.menu_revert).setVisible(true);
         }
-        return super.onPrepareOptionsMenu(menu);
+        return true;
     }
 
     /**
@@ -444,8 +495,29 @@ public class NoteEditor extends Activity {
             finish();
         } else if (id == R.id.menu_revert) {
             cancelNote();
+        } else if (id == R.id.menu_theme_toggle) {
+            // 切换主题
+            ThemeManager.toggleTheme(this);
+            // 重新创建Activity以应用新主题
+            recreate();
+        } else if (id == R.id.menu_export_single) {
+            // 导出当前笔记
+            exportCurrentNote();
+            return true;
         }
-        return super.onOptionsItemSelected(item);
+        return true;
+    }
+    
+    /**
+     * 导出当前笔记
+     */
+    private void exportCurrentNote() {
+        if (mUri != null) {
+            ExportManager exportManager = new ExportManager(this);
+            exportManager.exportSingleNote(mUri);
+        } else {
+            Toast.makeText(this, R.string.export_error_note_not_found, Toast.LENGTH_SHORT).show();
+        }
     }
 
 //BEGIN_INCLUDE(paste)
@@ -465,8 +537,8 @@ public class NoteEditor extends Activity {
         ClipData clip = clipboard.getPrimaryClip();
         if (clip != null) {
 
-            String text=null;
-            String title=null;
+            String text = null;
+            String title = null;
 
             // Gets the first item from the clipboard data
             ClipData.Item item = clip.getItemAt(0);
@@ -492,8 +564,8 @@ public class NoteEditor extends Activity {
                 // (moveToFirst() returns true), then this gets the note data from it.
                 if (orig != null) {
                     if (orig.moveToFirst()) {
-                        int colNoteIndex = mCursor.getColumnIndex(NotePad.Notes.COLUMN_NAME_NOTE);
-                        int colTitleIndex = mCursor.getColumnIndex(NotePad.Notes.COLUMN_NAME_TITLE);
+                        int colNoteIndex = orig.getColumnIndex(NotePad.Notes.COLUMN_NAME_NOTE);
+                        int colTitleIndex = orig.getColumnIndex(NotePad.Notes.COLUMN_NAME_TITLE);
                         text = orig.getString(colNoteIndex);
                         title = orig.getString(colTitleIndex);
                     }
@@ -509,22 +581,89 @@ public class NoteEditor extends Activity {
                 text = item.coerceToText(this).toString();
             }
 
-            // Updates the current note with the retrieved title and text.
-            updateNote(text, title);
+            // Updates the current note with the retrieved text. Title will be generated automatically.
+            updateNote(text, null);
         }
     }
 //END_INCLUDE(paste)
 
-    /**
-     * Replaces the current note contents with the text and title provided as arguments.
-     * @param text The new note contents to use.
-     * @param title The new note title to use
-     */
+
+    // 分类数据映射，用于保存分类名称和ID的对应关系
+    private Map<String, Long> mCategoryIdMap;
+    private List<String> mCategoryNames;
+    
+    private void initializeCategorySpinner() {
+        // 查询所有分类，使用正确的URI格式
+        Uri categoriesUri = Uri.parse("content://" + NotePad.AUTHORITY + "/categories");
+        Cursor cursor = getContentResolver().query(
+            categoriesUri,
+            new String[] { NotePadProvider.Categories._ID, NotePadProvider.Categories.COLUMN_NAME_TITLE },
+            null, null, null
+        );
+        
+        // 准备分类数据
+        final List<String> categoryNames = new ArrayList<>();
+        final Map<String, Long> categoryIdMap = new HashMap<>();
+        
+        // 调试：检查分类数据
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                int idIndex = cursor.getColumnIndex(NotePadProvider.Categories._ID);
+                int titleIndex = cursor.getColumnIndex(NotePadProvider.Categories.COLUMN_NAME_TITLE);
+                long id = cursor.getLong(idIndex);
+                String title = cursor.getString(titleIndex);
+                Log.d(TAG, "Category found: id=" + id + ", title=" + title);
+                categoryNames.add(title);
+                categoryIdMap.put(title, id);
+            } while (cursor.moveToNext());
+            cursor.close();
+        } else {
+            Log.d(TAG, "No categories found");
+            // 如果没有分类，添加一个默认分类
+            categoryNames.add("默认分类");
+            categoryIdMap.put("默认分类", NotePadProvider.Categories.DEFAULT_CATEGORY_ID);
+        }
+        
+        // 创建适配器
+        mCategoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categoryNames);
+        mCategoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        
+        // 设置分类选择事件监听和适配器
+        if (mCategorySpinner != null) {
+            mCategorySpinner.setAdapter(mCategoryAdapter);
+            mCategorySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    String selectedCategory = categoryNames.get(position);
+                    mCurrentCategoryId = categoryIdMap.get(selectedCategory);
+                    
+                    // 确保文字可见
+                    if (view instanceof TextView) {
+                        TextView textView = (TextView) view;
+                        textView.setTextColor(Color.BLACK);
+                        textView.setTextSize(18);
+                        Log.d(TAG, "Selected category: " + textView.getText());
+                    }
+                }
+                
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                    mCurrentCategoryId = NotePadProvider.Categories.DEFAULT_CATEGORY_ID;
+                }
+            });
+        }
+        
+        // 保存分类ID映射，用于后续查找
+        mCategoryIdMap = categoryIdMap;
+        mCategoryNames = categoryNames;
+    }
+    
     private final void updateNote(String text, String title) {
 
         // Sets up a map to contain values to be updated in the provider.
         ContentValues values = new ContentValues();
         values.put(NotePad.Notes.COLUMN_NAME_MODIFICATION_DATE, System.currentTimeMillis());
+        values.put(NotePad.Notes.COLUMN_NAME_CATEGORY_ID, mCurrentCategoryId);
 
         // If the action is to insert a new note, this creates an initial title for it.
         if (mState == STATE_INSERT) {
@@ -559,7 +698,7 @@ public class NoteEditor extends Activity {
         values.put(NotePad.Notes.COLUMN_NAME_NOTE, text);
 
         /*
-         * Updates the provider with the new values in the map. The ListView is updated
+         * Updates or inserts into the provider with the new values in the map. The ListView is updated
          * automatically. The provider sets this up by setting the notification URI for
          * query Cursor objects to the incoming URI. The content resolver is thus
          * automatically notified when the Cursor for the URI changes, and the UI is
@@ -569,12 +708,21 @@ public class NoteEditor extends Activity {
          * local database, the block will be momentary, but in a real app you should use
          * android.content.AsyncQueryHandler or android.os.AsyncTask.
          */
-        getContentResolver().update(
-                mUri,    // The URI for the record to update.
-                values,  // The map of column names and new values to apply to them.
-                null,    // No selection criteria are used, so no where columns are necessary.
-                null     // No where columns are used, so no where arguments are necessary.
-            );
+        if (mState == STATE_INSERT) {
+            // For new notes, use insert() method instead of update()
+            mUri = getContentResolver().insert(
+                    NotePad.Notes.CONTENT_URI,  // The URI for the note table
+                    values                     // The map of column names and new values
+                );
+        } else {
+            // For existing notes, use update() method
+            getContentResolver().update(
+                    mUri,    // The URI for the record to update.
+                    values,  // The map of column names and new values to apply to them.
+                    null,    // No selection criteria are used, so no where columns are necessary.
+                    null     // No where columns are used, so no where arguments are necessary.
+                );
+        }
 
 
     }

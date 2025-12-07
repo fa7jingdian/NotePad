@@ -16,20 +16,69 @@
 
 <resources>
     <string name="app_name">NotePad</string>
-    <string name="live_folder_name">Notes</string>
+    <string name="menu_theme_light">切换到浅色主题</string>
+    <string name="menu_theme_dark">切换到深色主题</string>
+    
+    <!-- 分类相关字符串 -->
+    <string name="category_label">分类:</string>
+    <string name="category_list_title">分类管理</string>
+    <string name="category_list_description">点击分类查看该分类下的笔记，长按进行编辑或删除操作</string>
+    <string name="menu_create_category">新建分类</string>
+    <string name="create_category_title">新建分类</string>
+    <string name="create_category_message">请输入分类名称</string>
+    <string name="edit_category_title">编辑分类</string>
+    <string name="edit_category_message">请输入新的分类名称</string>
+    <string name="delete_category_title">删除分类</string>
+    <string name="delete_category_message">确定要删除此分类吗？该分类下的笔记将移至默认分类。</string>
+    <string name="delete_confirm_title">确认删除</string>
+    <string name="delete_category_confirm_message">确定要删除这个分类吗？该分类下的所有笔记将移至默认分类。</string>
+    <string name="alert_dialog_ok">确定</string>
+    <string name="alert_dialog_cancel">取消</string>
+    <string name="category_title_required">分类名称不能为空</string>
+    <string name="no_categories_message">暂无分类，请创建新分类</string>
+    <string name="default_category_name">默认分类</string>
+    <string name="live_folder_name">笔记</string>
+    <string name="note_content_description">笔记内容输入区域</string>
+    <string name="title_hint">请输入笔记标题</string>
+    <string name="note_hint">请输入笔记内容</string>
+    <string name="selection_mode_title">已选择 %d 个分类</string>
+    <string name="cannot_delete_default_category">不能删除默认分类</string>
+    <string name="delete_multiple_categories_message">确定要删除选中的分类吗？分类中的笔记将移至默认分类。</string>
+    <string name="categories_deleted">成功删除 %d 个分类</string>
+
+    <!-- 导出功能相关字符串 -->
+    <string name="menu_export_notes">导出笔记</string>
+    <string name="menu_export_all">导出全部</string>
+    <string name="menu_export_category">按分类导出</string>
+    <string name="export_file_header">记事本导出文件</string>
+    <string name="export_category_header">分类</string>
+    <string name="export_created_date">创建时间</string>
+    <string name="export_modified_date">修改时间</string>
+    <string name="export_success">成功导出 %1$d 条笔记到 %2$s</string>
+    <string name="export_single_success">笔记 "%1$s" 已导出到 %2$s</string>
+    <string name="export_error_storage_unavailable">存储不可用</string>
+    <string name="export_error_create_directory">无法创建导出目录</string>
+    <string name="export_error_no_notes">没有可导出的笔记</string>
+    <string name="export_error_io_exception">导出时发生错误</string>
+    <string name="export_error_note_not_found">找不到指定笔记</string>
+    <string name="export_select_category">选择分类</string>
 
     <string name="title_edit_title">Note title:</string>
     <string name="title_create">New note</string>
     <string name="title_edit">Edit: %1$s</string>
-    <string name="title_notes_list">Notes</string>
+    <string name="title_notes_list">笔记列表</string>
 
-    <string name="menu_add">New note</string>
-    <string name="menu_save">Save</string>
-    <string name="menu_delete">Delete</string>
-    <string name="menu_open">Open</string>
-    <string name="menu_revert">Revert changes</string>
-    <string name="menu_copy">Copy</string>
-    <string name="menu_paste">Paste</string>
+    <string name="menu_add">新建笔记</string>
+    <string name="menu_save">保存</string>
+    <string name="menu_delete">删除</string>
+    <string name="menu_open">打开</string>
+    <string name="menu_revert">撤销更改</string>
+    <string name="menu_copy">复制</string>
+    <string name="menu_paste">粘贴</string>
+    <string name="menu_batch_delete">批量删除</string>
+    <string name="menu_search">搜索</string>
+    <string name="search_hint">搜索笔记</string>
+
 
     <string name="button_ok">OK</string>
     <string name="text_title">Title:</string>
@@ -40,4 +89,5 @@
     <string name="error_title">Error</string>
     <string name="error_message">Error loading note</string>
     <string name="nothing_to_save">There is nothing to save</string>
+
 </resources>
