@@ -348,9 +348,9 @@ public class NoteEditor extends Activity {
 
         /*
          * Something is wrong. The Cursor should always contain data. Report an error in the
-         * note.
+         * note. However, in INSERT state, mCursor is intentionally null, so don't show error.
          */
-        } else {
+        } else if (mState != STATE_INSERT) {
             setTitle(getText(R.string.error_title));
             mText.setText(getText(R.string.error_message));
         }
